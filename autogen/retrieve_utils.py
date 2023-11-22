@@ -4,6 +4,7 @@ import requests
 from urllib.parse import urlparse
 import glob
 import chromadb
+from bs4 import BeautifulSoup
 
 if chromadb.__version__ < "0.4.15":
     from chromadb.api import API
@@ -219,13 +220,21 @@ def get_file_from_url(url: str, save_path: str = None):
         save_path = os.path.join("/tmp/chromadb", os.path.basename(url))
     else:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    with requests.get(url, stream=True) as r:
+    with requests.get(url, stream=True, verify=False) as r:
         r.raise_for_status()
+        html = r.text
+        soup = BeautifulSoup(html, "html.parser")
+        sitetext = remove_empty_lines(" ".join(soup.body.get_text().strip().split()))
         with open(save_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+            #for chunk in r.iter_content(chunk_size=8192):
+                #f.write(chunk)
+            f.write(sitetext.encode("utf-8"))
     return save_path
 
+def remove_empty_lines(text):
+    lines = text.split('\n')
+    non_empty_lines = [line for line in lines if line.strip() != '']
+    return '\n'.join(non_empty_lines)
 
 def is_url(string: str):
     """Return True if the string is a valid URL."""
